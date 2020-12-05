@@ -1,0 +1,193 @@
+$cell-size: 4rem;
+* {
+    margin: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #282828;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-content: center;
+    align-items: center;
+}
+
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(15, $cell-size);
+    grid-template-rows: repeat(6, $cell-size);
+    gap: 2px 2px;
+    grid-template-areas:
+        '.    .    .    .    .    .    id7  id7  .   .   .    .    .    .    .  '
+        '.    id15 id15 .    id12 id12 id8  id8  id4 id4 .   .    .    .    .  '
+        'id17 id17 id14 id14 id12 id12 .    id9  .   id5 id3  id3  id1  id1  id0'
+        'id17 id17 id14 id14 id13 id13 .    id9  .   id5 id3  id3  id2  id2  id0'
+        '.    id16 id16 .    id13 id13 id10 id10 id6 id6 .    .    .    .    .  '
+        '.    .    .    .    .    .    id11 id11 .   .   .    .    .    .    .  ';
+}
+
+@for $i from 0 through 17 {
+    [data-id='#{$i}'] {
+        grid-area: id#{$i};
+    }
+}
+
+.room {
+    position: relative;
+    display: flex;
+    background-color: #ccd;
+    display: flex;
+    justify-content: center;
+    align-content: center;
+    align-items: center;
+    font-family: monospace;
+    font-size: 1.5rem;
+    white-space: pre;
+    text-align: center;
+    // color: #fff;
+    cursor: pointer;
+    &:hover {
+        background-color: lighten(#ccd, 15%);
+    }
+}
+
+.label {
+    position: relative;
+    z-index: 20;
+    [data-breach='true'] & {
+        &::before {
+            content: '💥';
+        }
+    }
+}
+
+.o2-value {
+    display: block;
+    white-space: nowrap;
+    font-size: 1rem;
+    font-weight: bold;
+}
+
+.door {
+    $door-len: $cell-size / 2;
+    $door-thickness: 0.75rem;
+    position: absolute;
+    // position: static;
+    // transform: rotate(90deg)!important;
+    z-index: 10;
+    width: $door-len;
+    height: $door-thickness;
+    border: 2px solid #282828;
+    background-color: #ff8050;
+    cursor: pointer;
+    &:hover,
+    &.hover {
+        background-color: #ff5050;
+    }
+    &[data-pos='tl'] {
+        top: 0;
+        left: 25%;
+        transform: translate(-50%, -50%);
+    }
+    &[data-pos='tr'] {
+        top: 0;
+        left: 75%;
+        transform: translate(-50%, -50%);
+    }
+    &[data-pos='bl'] {
+        bottom: 0;
+        left: 25%;
+        transform: translate(-50%, 50%);
+    }
+    &[data-pos='br'] {
+        bottom: 0;
+        left: 75%;
+        transform: translate(-50%, 50%);
+    }
+    &[data-pos='lt'] {
+        top: 25%;
+        left: 0;
+        transform: translate(-50%, -50%) rotate(90deg);
+    }
+    &[data-pos='lb'] {
+        top: 75%;
+        left: 0;
+        transform: translate(-50%, -50%) rotate(90deg);
+    }
+    &[data-pos='rt'] {
+        top: 25%;
+        right: 0;
+        transform: translate(50%, -50%) rotate(-90deg);
+    }
+    &[data-pos='rb'] {
+        top: 75%;
+        right: 0;
+        transform: translate(50%, -50%) rotate(-90deg);
+    }
+    &[data-pos='tc'] {
+        top: 0;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+    &[data-pos='bc'] {
+        bottom: 0;
+        left: 50%;
+        transform: translate(-50%, 50%);
+    }
+    &[data-pos='lc'] {
+        top: 50%;
+        left: 0;
+        transform: translate(-50%, -50%) rotate(90deg);
+    }
+    &[data-pos='rc'] {
+        top: 50%;
+        right: 0;
+        transform: translate(50%, -50%) rotate(90deg);
+    }
+    &[data-open='true'] {
+        border: 0;
+        background-color: #ccd;
+        background-image: linear-gradient(
+            to left,
+            #000 1px,
+            #ff8050 10%,
+            #ff8050 20%,
+            #ccd 20%,
+            #ccd 80%,
+            #ff8050 80%,
+            #ff8050 90%,
+            #000 calc(100% - 1px)
+        );
+    }
+}
+
+.o2-overlay {
+    opacity: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    mix-blend-mode: multiply;
+    background-color: #ff5050;
+    background-image: linear-gradient(
+        45deg,
+        #ff5050 25%,
+        #ccccdd 25%,
+        #ccccdd 50%,
+        #ff5050 50%,
+        #ff5050 75%,
+        #ccccdd 75%,
+        #ccccdd 100%
+    );
+    background-size: 22.63px 22.63px;
+}
