@@ -1,6 +1,7 @@
 const rooms = document.querySelectorAll('.room');
 const doors = document.querySelectorAll('.door');
 
+// set click handlers on doors
 doors.forEach((door: HTMLDivElement, index) => {
     const _toggleDoorOpenState = (e: MouseEvent) => {
         e.stopPropagation();
@@ -15,6 +16,7 @@ doors.forEach((door: HTMLDivElement, index) => {
     door.dataset.id = index.toString();
 });
 
+// set up click handlers on rooms
 rooms.forEach((room: HTMLDivElement) => {
     const _toggleBreachState = (e: MouseEvent) => {
         e.stopPropagation();
@@ -30,13 +32,26 @@ rooms.forEach((room: HTMLDivElement) => {
     room.dataset.o2 = '0';
 });
 
+// the model for a door
+// room = the HTML Room Element
+// door = the HTML Door Element
+// space flag = true/false of whever this via accesses space if open
+// joins shows connecting rooms the via connects
 interface Via {
     room: HTMLDivElement;
     door: HTMLDivElement;
     spaceFlag: boolean;
+    joins: Room['id'][];
 }
 
-interface RoomData {
+// the model for the room
+// id = numeric string id
+// el = HTML Room Element
+// o2 = float of o2 in room
+// o2DeltaRegister = how much the o2 changes this time step
+// o2El = o2 visual HTML element
+// vias = list of doors attached to this room
+interface Room {
     id: string;
     el: HTMLDivElement;
     o2: number;
@@ -45,19 +60,23 @@ interface RoomData {
     vias: Via[];
 }
 
+// create a ship object, holding an array of all rooms,
+// with all of the vias in the room
 const ship = Array.from(rooms).map((room: HTMLDivElement) => {
     const vias: Via[] = Array.from(doors)
         .filter((door: HTMLDivElement) => {
             return door.dataset.joins.split(':').includes(room.dataset.id);
         })
         .map((door: HTMLDivElement) => {
+            const joins = door.dataset.joins.split(':');
             return {
                 room: room,
                 door: door,
-                spaceFlag: door.dataset.joins.split(':')[1] === 'space',
+                spaceFlag: joins[1] === 'space',
+                joins: joins,
             };
         });
-    const data: RoomData = {
+    const data: Room = {
         id: room.dataset.id,
         el: room,
         o2: 0.8,
@@ -68,53 +87,61 @@ const ship = Array.from(rooms).map((room: HTMLDivElement) => {
     return data;
 });
 
-const flowOxygen = (ship: RoomData[]) => {
-    const drainRate = 0.03;
-    const fillRate = 0.012 / 60;
-    const viaFactor = 0.03;
+// call this every frame to simulate the flow of oxygen in each room
+const flowOxygen = (ship: Room[]) => {
+    const DRAIN_RATE = 0.03;
+    const FILL_RATE = 0.012 / 60;
+    const VIA_FACTOR = 0.03;
 
-    ship.forEach((room: RoomData) => {
+    // For each room in the ship, run the following:
+    ship.forEach((room: Room) => {
         // if breached, draw out air
         if (room.el.dataset.breach === 'true') {
-            room.o2DeltaRegister -= drainRate;
+            room.o2DeltaRegister -= DRAIN_RATE;
         }
 
         // if exposed to space, draw out air
-        if (
-            room.vias.find(
-                (via) => via.spaceFlag && via.door.dataset.open === 'true'
-            )
-        ) {
-            room.o2DeltaRegister -= drainRate;
+        const _isRoomExposedToSpace = (via: Via): boolean =>
+            via.spaceFlag && via.door.dataset.open === 'true';
+        if (room.vias.find(_isRoomExposedToSpace)) {
+            room.o2DeltaRegister -= DRAIN_RATE;
         }
 
         // average rooms exposed to each other
         room.vias
+            // filter to only open rooms
             .filter((via) => {
                 return via.door.dataset.open === 'true';
             })
+            // for each room with open via
             .forEach((via) => {
-                const outflowRoom: RoomData =
-                    ship[parseInt(via.door.dataset.joins.split(':')[1])];
+                // get the neighbor, aka outflow room
+                const outflowRoom: Room = ship[parseInt(via.joins[1])];
+                // if outflow room is not connected to space
                 if (outflowRoom) {
+                    // calc the delta between two rooms
                     const delta = room.o2 - outflowRoom.o2;
-                    room.o2DeltaRegister -= delta * viaFactor;
-                    outflowRoom.o2DeltaRegister += delta * viaFactor;
+
+                    // give or receive pressure between the rooms
+                    room.o2DeltaRegister -= delta * VIA_FACTOR;
+                    outflowRoom.o2DeltaRegister += delta * VIA_FACTOR;
                 }
             });
 
-        // add o2 to every room
+        // add o2 to every room, if they have positive pressure
         if (room.o2DeltaRegister >= 0) {
-            room.o2DeltaRegister += fillRate;
+            room.o2DeltaRegister += FILL_RATE;
         }
     });
 
-    ship.forEach((room: RoomData) => {
-        // apply delta
+    ship.forEach((room: Room) => {
+        // apply delta degister values to room
         room.o2 += room.o2DeltaRegister;
+
+        // zero delta for next tick
         room.o2DeltaRegister = 0;
 
-        // render o2 state
+        // render o2 state in UI
         room.o2 = Math.min(Math.max(0, room.o2), 1);
         room.el.dataset.o2 = room.o2.toFixed(2).toString();
         room.o2El.style.opacity = (1 - room.o2).toString();
