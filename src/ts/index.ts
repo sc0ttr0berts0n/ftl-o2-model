@@ -55,7 +55,7 @@ interface Room {
     id: string;
     el: HTMLDivElement;
     o2: number;
-    o2DeltaRegister: number;
+    pressureAcc: number;
     o2El: HTMLDivElement;
     vias: Via[];
 }
@@ -80,7 +80,7 @@ const ship = Array.from(rooms).map((room: HTMLDivElement) => {
         id: room.dataset.id,
         el: room,
         o2: 0.8,
-        o2DeltaRegister: 0,
+        pressureAcc: 0,
         o2El: room.querySelector('.o2-overlay'),
         vias: vias,
     };
@@ -91,20 +91,20 @@ const ship = Array.from(rooms).map((room: HTMLDivElement) => {
 const flowOxygen = (ship: Room[]) => {
     const DRAIN_RATE = 0.03;
     const FILL_RATE = 0.012 / 60;
-    const VIA_FACTOR = 0.03;
+    const FLOW_FACTOR = 0.03;
 
     // For each room in the ship, run the following:
     ship.forEach((room: Room) => {
         // if breached, draw out air
         if (room.el.dataset.breach === 'true') {
-            room.o2DeltaRegister -= DRAIN_RATE;
+            room.pressureAcc -= DRAIN_RATE;
         }
 
         // if exposed to space, draw out air
         const _isRoomExposedToSpace = (via: Via): boolean =>
             via.spaceFlag && via.door.dataset.open === 'true';
         if (room.vias.find(_isRoomExposedToSpace)) {
-            room.o2DeltaRegister -= DRAIN_RATE;
+            room.pressureAcc -= DRAIN_RATE;
         }
 
         // average rooms exposed to each other
@@ -120,29 +120,31 @@ const flowOxygen = (ship: Room[]) => {
                 // if outflow room is not connected to space
                 if (outflowRoom) {
                     // calc the delta between two rooms
-                    const delta = room.o2 - outflowRoom.o2;
+                    const deltaPressure = room.o2 - outflowRoom.o2;
 
                     // give or receive pressure between the rooms
-                    room.o2DeltaRegister -= delta * VIA_FACTOR;
-                    outflowRoom.o2DeltaRegister += delta * VIA_FACTOR;
+                    room.pressureAcc -= deltaPressure * FLOW_FACTOR;
+                    outflowRoom.pressureAcc += deltaPressure * FLOW_FACTOR;
                 }
             });
 
         // add o2 to every room, if they have positive pressure
-        if (room.o2DeltaRegister >= 0) {
-            room.o2DeltaRegister += FILL_RATE;
+        if (room.pressureAcc >= 0) {
+            room.pressureAcc += FILL_RATE;
         }
     });
 
     ship.forEach((room: Room) => {
         // apply delta degister values to room
-        room.o2 += room.o2DeltaRegister;
+        room.o2 += room.pressureAcc;
 
         // zero delta for next tick
-        room.o2DeltaRegister = 0;
+        room.pressureAcc = 0;
+
+        // clamp all o2 to 0,1
+        room.o2 = Math.min(Math.max(0, room.o2), 1);
 
         // render o2 state in UI
-        room.o2 = Math.min(Math.max(0, room.o2), 1);
         room.el.dataset.o2 = room.o2.toFixed(2).toString();
         room.o2El.style.opacity = (1 - room.o2).toString();
         room.el.querySelector('.o2-value').textContent = room.o2.toFixed(2);
